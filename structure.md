@@ -133,7 +133,3 @@ You have an idea for a web app -- but how do you realize it? The steps recommend
 5. Setup infrastructure
 6. Tests first
 7. Code second
-
-## Creating a Web App from Scratch
-
-https://css-tricks.com/app-from-scratch-1-design/
