@@ -235,10 +235,46 @@ function Foo() {
 }
 ```
 
+There is one tricky situation that can happen with closures: circular
+references. Say we want to assign a function to `Element.onclick` that can be
+called without any arguments but nevertheless keeps state in its
+closure. Consider this code to solve this problem:
+
+```JS
+function assignOnClick(element, arg1, arg2) {
+	element.onclick = function() {
+		/* Use arg1, arg2 */
+	}
+}
+```
+
+Here, the anonymous function will keep `arg1` and `arg2` in its closure, so that
+we can ues these arguments and nevertheless assign a function to `onClick` that
+takes no parameters at all. However, note also that `element` will stay in the
+closure of the function, while of course `element` will have a reference to the
+anonymous function via the `onclick` property. As you can see, we have circular
+references between the anonymous function and `element`, preventing garbage
+collection. The solution is to define the function in a new function scope
+without `element`:
+
+```JS
+function assignOnClick(element, arg1, arg2) {
+	element.onclick = noCyclesPlease(arg1, arg2);
+}
+
+function noCyclesPlease(arg1, arg2) {
+	return function() {
+	    /* Use arg1, arg2 */
+	}
+}
+```
+
 Resources:
 
 * http://stackoverflow.com/questions/111102/how-do-javascript-closures-work?rq=1
-* http://stackoverflow.com/questions/9644044/javascript-this-pointer-within-nested-function
+*
+  http://stackoverflow.com/questions/9644044/javascript-this-pointer-within-nested-function
+* https://google.github.io/styleguide/javascriptguide.xml
 
 #### `call` and `apply`
 
@@ -264,6 +300,31 @@ following syntax:
 ```
 
 Or `a => { /* body */}` if you only have one parameter.
+
+### `with`
+
+The `with` statement expands the scope of an object to the current
+namespace. More precisely, `with(object) { }` will expand the `object`'s
+namespace into the namespace of the following block by placing the namespace of
+the `object` at the __head__ of the scope chain. This means that any undefined
+reference will *first* look inside `object`'s namespace, and then
+outside. Furthermore, declaring any variable inside the block that collides with
+a property of the object will in fact redecalre the object's member rather than
+defining a new local variable. It can be used like so:
+
+```JS
+var x;
+
+with(Math) {
+	x = sin(0) + cos(1);
+}
+```
+
+However, `with` is deprecated and not even allowed in strict mode.
+
+Resources:
+
+* https://developer.mozilla.org/en-US/docs/Web/JavaScript/Reference/Statements/with
 
 ### Hoisting
 
@@ -399,6 +460,8 @@ b\
 c";
 ```
 
+The Google Style Guide recommends concatenation.
+
 The following functions of the `String` type are of interest:
 
 * `charAt(index)`, which acts like `[index]` (which is also available for
@@ -428,7 +491,20 @@ The following functions of the `String` type are of interest:
 
 ### `Boolean`
 
-The `Boolean` datatype has the `true` and `false` literals (constants).
+The `Boolean` datatype has the `true` and `false` literals (constants). Note
+that like in Python, certain expressions implicitly convert to Boolean (useful
+in conditions). The following all evaluate to `false` in boolean expressions:
+
+* `null`
+* `undefined`
+* `''` (the empty string)
+* `0` (the number)
+
+But be careful, because these are all true:
+
+* '0' (the non-empty string)
+* [] (__the empty array__)
+* {} (__the empty object__)
 
 ### `Number`
 
@@ -970,6 +1046,20 @@ function Foo() {
 Foo.prototype = Object.create(Bar.prototype);
 Foo.prototype.constructor = Foo;
 ```
+Note that when you enumerate an object via a `for ... in ` loop, you are also
+enumerating the members it inherits from its prototype. To prevent this, you may
+want to uset he `Object.prototype.hasOwnProperty` method (and cache it) to check
+if the object you are enumerating actually contains a given property, or whether
+it comes from somewhere up the prototype chain:
+
+```JS
+var hasOwn = Object.prototype.hasOwnProperty;
+for (var i in myobject) {
+	if (hasOwn.call(myobject, i)) {
+	/* ... */
+	}
+}
+```
 
 Resources:
 
@@ -1018,6 +1108,10 @@ var module = (function(m) {
 })(module || {});
 ```
 
-This also allows for submodules, of course.
+This also allows for submodules, of course. Note how we wrap the function
+declaration in parantheses. The reason why is that we actually want an anonymous
+function and call it directly. However, any statement that starts with
+`function` is interpreted as a function declaration, which can never be
+anonymous.
 
 http://www.adequatelygood.com/JavaScript-Module-Pattern-In-Depth.html

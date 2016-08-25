@@ -190,3 +190,50 @@ ways exist to display the spades glyph:
 * `&x2660;`
 
 https://dev.w3.org/html5/html-author/charref
+
+### `data-*` Attributes
+
+HTML5 introduced `data-*` attributes, which allow you do add custom attributes
+to any HTML tag to query and manipulate those elements. For example like so:
+
+```HTML
+<a data-foo="bar">Link</a>
+```
+
+And then:
+
+```CSS
+[data-foo="bar"] {
+	color: red;
+}
+```
+
+or
+
+```JS
+var a = []
+var collection = document.getElementsByTagName('p');
+for (var i = 0, length = collection.length; i < length; ++i) {
+  var element = collection[i];
+    if (element.hasAttribute('data-bar')) {
+	    a.push(element);
+	}
+}
+
+console.log(a[0].innerHTML);
+```
+
+### `<select>`
+
+HTML5 adds a `<select>` tag for drop down boxes, to which you can add options
+via the `<option>` tag. Each option should contain some text to
+display. Optionally, `<option>` can have a `value` attribute to specify some
+value to be selected other than the internal text:
+
+```HTML
+<select>
+	<option>First</option>
+	<option>Second</option>
+	<option>Third</option>
+</select>
+```
