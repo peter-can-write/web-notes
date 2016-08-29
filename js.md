@@ -1,4 +1,4 @@
-JavaScript
+# JavaScript
 
 JavaScript is a programming language based on the ECMAScript standard used to
 manipulate the DOM (document object model), the basic data structure of a
@@ -163,9 +163,31 @@ var b = a;
 ```
 
 Also, a declared function has an assigned name property: `a.name` returns
-`"a"`.
+`"a"`. However, an interesting thing we can only do with function expressions
+assigned to variables is *lazy function definitions*. In this pattern, we
+perform initialization of a function (in terms of contained local variables or
+any first-class properties, or calling some other functions) when calling it the
+first time, and then re-assign the variable to which the function expression is
+bound to some other function:
 
-http://stackoverflow.com/questions/336859/javascript-function-declaration-syntax-var-fn-function-vs-function-fn
+```JS
+var foo = function() {
+	/* ... Initialization ... */
+	// Reassign
+	foo = function() { return 5; }
+}
+```
+
+Note that this will only work exactly once, the first the function is called
+(ever). Any references to the original function declared before the
+re-assignment will also not point to the new function, of course. You could also
+just return the local function, with the same result.
+
+Resources:
+
+* http://stackoverflow.com/questions/336859/javascript-function-declaration-syntax-var-fn-function-vs-function-fn
+
+#### Arguments
 
 Inside functions, you can access the arguments passed via the `arguments`
 object, which is implicitly available within every function. This `arguments`
@@ -301,6 +323,62 @@ following syntax:
 
 Or `a => { /* body */}` if you only have one parameter.
 
+#### Currying
+
+*Currying* a function is a concept from the domain of functional languages,
+whereby we apply a function only *partially* to a subset of its required
+arguments, yielding a new function that can later on accept more arguments
+(along with the ones initially supplied when currying). For example, we may have
+a function $f: \mathbb{N} \times \mathbb{N} \rightarrow \mathbb{N}: (x, y)
+\mapsto x + y$. The concept of currying allows us to bind one or more of the
+parameters of a function to values we specify beforehand. As such, we could bind
+the $x$ argument of the function $f$ to the value $5$, yielding a new
+uni-variate function taking just a single parameter, which is always added to
+$5$ (as per the definition of the function).
+
+In JavaScript, currying is enabled by closures. For example, the simplest thing
+we could do is allow for currying of the first argument of a function that
+otherwise would take two arguments:
+
+```JS
+function curry(fn, first) {
+	return function(second) {
+		return fn(first, second);
+	}
+}
+
+function add(x, y) { return x + y; }
+
+var addTo5 = curry(add, 5);
+
+addTo5(1);
+addTo5(3);
+addTo5(7);
+```
+
+However, a more general currying function would make use of the generic `apply`
+method provided by all function objects. It allows us to store all arguments
+passed to the currying function in an array and later concatenate any further
+arguments to those stored:
+
+```JS
+function curry(fn) {
+	var slice = Array.prototype.slice,
+		stored = slice.call(arguments, 1);
+
+	return function() {
+		var args = stored.concat(slice.call(arguments));
+		return fn.apply(null, args);
+	}
+}
+
+function foo(a, b, c, d) { return a + b + c + d; }
+
+var bar = curry(foo, 1, 2);
+bar(3, 4); // 10
+bar(7, 8); // 18
+```
+
 ### `with`
 
 The `with` statement expands the scope of an object to the current
@@ -427,15 +505,32 @@ Python, you have `try`, `catch` and `finally` blocks to catch these
 exceptions. Like in Python, `finally` will execute code regardless of whether or
 not an exception was actually thrown.
 
+You can `throw` more or less any kind of object you want. However, the standard
+idiom for error objects is to have a `name` (static) property containing the
+name of the exception (e.g. `"FooError"`) and a `message` property, containing a
+textual explanation of the cause or nature of the exception. As such, for custom
+errors, you can either define your own classes and then `throw FooError('asdf')`
+(with or without `new`, both work), or simply throw an object literal:
+
+```JS
+if (badness) {
+	throw {
+		name: 'BadnessError',
+		message: 'Badness occurred, run!'
+	};
+}
+```
+
 ## Types
 
-JavaScript supports the following data types:
+JavaScript supports the following data types, among others:
 
 * `String`
 * `Boolean`
 * `Number`
 * `Object`
 * `Array`
+* `Date`
 
 The following paragraphs discuss these data types and their syntax in further
 detail. All of these data types are also functions (with the first letter
@@ -563,10 +658,10 @@ Two interesting "static" methods `Object`s have are `Object.seal(object)` and
 `Object.freeze(object)`. The latter returns a copy of an object that is
 effectively immutable in the sense that freezing an object disallows further
 keys to be added (to the returned, frozen copy), as well as preventing any
-changes to elements inside the object. `seal()`, on the other hand, only
-prevents modification of the `Object`, not the elements inside the
-`Object`. That is, you may not add elements, but still change the ones in the
-object.
+changes to elements inside the object. The function `Object.seal()`, on the
+other hand, only prevents modification of the `Object`, not the elements inside
+the `Object`. That is, you may not add elements, but still change the ones in
+the object.
 
 Iteration can be achieved via a range loop like in Java, where the loop returns
 the keys of the object (in unspecified order, of course):
@@ -576,6 +671,10 @@ for (var key in object) {
 	console.log(object[key])
 }
 ```
+
+Note that in ES5, you can use `Object.keys(object)` to retrieve an array of all
+keys in the object (only those in the object itself, i.e. `hasOwnProperty`
+returns true for all returned keys).
 
 ### `Array`
 
@@ -614,7 +713,7 @@ A few other interesting methods of arrays are:
   was empty, this method returns that last element, else it returns `undefined`.
 * `join(separator)`, which joins the elements of an array with the given
   separator string, like `separator.join(list)` would in Python. The separator
-  defaults to a comma and must thus not be passed if the comma is fine as a
+  defaults to a comma.
 * `shift()`: Removes and returns the *first* element of the array, if any
   exists.
 * `slice(begin, end)`: Slices an array like in Python. Also like in Python, both
@@ -665,6 +764,31 @@ important constructors:
 You can then basically access, i.e. read and write to those members. Moreover,
 the `Date` prototype has a `now()` method, which returns the number of
 milliseconds since the epoch.
+
+### Regular Expressions
+
+JavaScript has native support for regular expressions, which you can create in
+two ways: via the `RegExp` class or regular expression *literals*. The latter is
+obviously a lot more exciting. A regex literal is created by enclosing a regular
+expression between forward slashes, like so `/<regexp>/<flags>`, where `<flags>`
+is a combination of the following three characters (if any):
+
+* `g`: Match globally, i.e. multiple times and not just a single time.
+* `m`: Match over multiple lines, not just a single line. Without this flag, `^`
+  and `$` match the beginning and end of the entire string, not every
+  line (respectively). With the `m` flag, `^` denotes the start of each line and
+  `$` the end of each line, delimited by newlines or carriage returns.
+* `i`: Case-insensitive match (regular expressions are case-sensitive by
+  default).
+
+Note that the JavaScript regular expression engine does not support lookbehind
+references. Other than that, you can use regular expressions for functions like
+`String.prototype.replace`, which returns a new string:
+
+```JS
+var s = "foObar";
+console.log(s.replace(/o{:2}b?/gi, '1')); // f1ar
+```
 
 ## Strict Mode
 
@@ -951,7 +1075,34 @@ Foo.prototype = {
 ```
 
 Note how we assign the `constructor` member to the function (the constructor)
-itself.
+itself. The reason why we don't add methods to the function class (constructor)
+directly via the `this` reference (which would be totaly possible and fine), is
+that this would imply the instantiation (declaration) of a whole new copy of the
+method for each `new` instance. By adding the method to the prototype, we only
+ever declare one such function, which will nevertheless be accessible to each
+instance of the class through the prototype chain.
+
+### Omitting `new`
+
+What happens when you call a constructor function, but without prepending the
+`new` keyword? Well, you still call the function, however `this` will point to
+the global object (`window` in browsers) rather than the current object, as you
+intended. As a result, you get a big mess. To solve this, you can use the
+following pattern: Inside the constructor, first check if `this` is `instanceof`
+the constructor you are calling. If not, then the function must have been called
+without `new` (in mistake), so you re-invoke it with `new` from within the
+constructor (possibly forwarding any arguments) and return the object directly:
+
+```JS
+function Foo(argument) {
+	if (!(this instanceof Foo)) {
+		// Foo() was called instead of new Foo()
+		return new Foo(argument);
+	}
+
+	this.bar = ...;
+}
+```
 
 ### Inheritance
 
@@ -1046,9 +1197,10 @@ function Foo() {
 Foo.prototype = Object.create(Bar.prototype);
 Foo.prototype.constructor = Foo;
 ```
+
 Note that when you enumerate an object via a `for ... in ` loop, you are also
 enumerating the members it inherits from its prototype. To prevent this, you may
-want to uset he `Object.prototype.hasOwnProperty` method (and cache it) to check
+want to use the `Object.prototype.hasOwnProperty` method (and cache it) to check
 if the object you are enumerating actually contains a given property, or whether
 it comes from somewhere up the prototype chain:
 
@@ -1069,6 +1221,124 @@ Resources:
 *
   http://stackoverflow.com/questions/1646698/what-is-the-new-keyword-in-javascript
 * https://zeekat.nl/articles/constructors-considered-mildly-confusing.html
+
+### Static Members
+
+It is important to understand that everything in JavaScript is an object, even
+functions. As such, the concept of static variables or functions is a very
+simple one: you just add a property to the function object!
+
+```JS
+function Foo() {}
+
+Foo.myStaticFunction() = function() {
+	/* ... */
+}
+
+Foo.myStaticVariable = 5;
+```
+
+Note, however, that these static members will be accessible only from `Foo` and
+not any inherited classes. For this, you would have to simply add them to the
+prototype of `Foo`, yielding the same semantics but allowing inheritance of
+properties. However, in that case you could no longer access the static method
+via the `Foo.method` syntax. You would, in essence, simply be adding a method to
+each instance that does not operate on non-static data.
+
+It it interesting to note that when you call a static method, i.e. one that is a
+property of the Function itself (the constructor), `this` will be bound to the
+function, not to any instance. This is relevant when you want to have the
+semantics of being able to call a static method `foo` on both the class and the
+instance, like in Java or C++. This can be achieved simply by setting a
+reference to the static method in the prototype of the class. In that case (and
+probably any case), simply avoid using `this` inside the static method.
+
+Private static members can be achieved via closures when creating the
+constructor function. In this pattern, we would assign the constructor to the
+result of an immediate function, in which we declare local variables and
+ultimately return a constructor function. The local variables would be contained
+in the closure of the returned constructor and thus act as private
+members. Moreover, because all instances would hold a reference to the same
+closure, these private variables would be static. For example, we may want to
+give each instance of a class `Elephant` we create a unique, constant ID. We can
+achieve this like so (taking advantage of the fact that primitive types are deep
+copied, like in Java):
+
+```JS
+var Elephant = (function() {
+
+	// The private static member
+	var counter = 0;
+
+	// The actual constructor
+	return function() {
+		this.id = counter++;
+	};
+})();
+
+var a = new Elephant(); // a.id = 0
+var b = new Elephant(); // b.id = 1
+```
+
+Resources:
+
+* http://stackoverflow.com/questions/7694501/class-static-method-in-javascript
+
+### Private Members
+
+JavaScript in itself has no notion of access specifiers for its classes' members
+(i.e. function properties). However, we can model private members (like many
+things) through functions and closures. The simplest way you can think of this
+is to simply keep local variables in the constructor and then add member
+functions to `this` that can later on access these private variables, while
+outside parties cannot:
+
+```JS
+function Foo() {
+	var private = 5;
+	this.method = function() {
+		/* Access private member */
+	}
+}
+
+var foo = new Foo();
+foo.method(); // Accesses the private member
+foo.private   // undefined
+```
+
+However, this pattern has the drawback of having to add the method to `this`,
+meaning every method we add will have to be re-created for each new
+object. Nevertheless, this is fine and in fact the only way to achieve private
+access for instance-level properties. Note that when have a *private* member
+like `private`, any method which has access to such a *private* member, like
+`method`, is called a *priviledged* method.
+
+Another pattern which denies access to certain members in the outside world adds
+private members to the prototype, making them a sort of private static
+members. For this, we use the immediate function pattern like so:
+
+```JS
+function foo(/* ... */) { /* ... */ }
+
+foo.prototype = (function() {
+	var private = 5;
+	return {
+		constructor: foo,
+		method: function(value) { return private + value; }
+	};
+})();
+```
+
+or so:
+
+```JS
+(function() {
+	var private = 5;
+	foo.prototype.method = function(value) { return private + value; }
+})();
+```
+
+Which doesn't require us to return the entire prototype object each time.
 
 ## Modules
 
@@ -1114,4 +1384,212 @@ function and call it directly. However, any statement that starts with
 `function` is interpreted as a function declaration, which can never be
 anonymous.
 
-http://www.adequatelygood.com/JavaScript-Module-Pattern-In-Depth.html
+Another pattern for modules is to use an *immediate object*, which is basically
+an object literal with some initialization method we call immediately:
+
+```JS
+var module = ({
+	a: 1,
+	b: 2
+	c: function() { ... }
+
+	init: function() {
+		// Access to this because the method is called on an object
+		this.foo = 7;
+		/* ... */
+
+		return this;
+	}
+}).init();
+```
+
+Note that the point of this pattern is not necessarily to create a re-usable and
+extendable module, but rather a contained scope. Regarding the syntax, we must
+wrap the object literal (the braces) in parantheses, as it will otherwise be
+interpreted as a block, as if for a `while` or `if` block.
+
+Resources:
+
+* http://www.adequatelygood.com/JavaScript-Module-Pattern-In-Depth.html
+
+### Module Privacy
+
+There is one pattern, called the *revealing module* pattern, which can help give
+mdodules a little more privacy and prevent users of the module from
+unnecessarily or accidentally breaking things. The basic idea is to never add
+members to the module, but only references to internally defined, private
+variables. As such, modifying any property of the module (e.g. a function
+reference) by, say, setting it to `null`, would only set the internal reference
+to `null` and not the actual internal function. This could be done like so:
+
+```JS
+var module = (function(m) {
+	var privateVariable = 5;
+
+	function publicMethod(x, y) { return x + y; }
+
+	m.method = publicMethod;
+
+	return m;
+
+})(module || {});
+```
+
+Note that when not adding to an existing module, but just returning a new one
+(via an object literal), it may be a good idea to `Object.freeze` it:
+
+```JS
+var module = (function(m) {
+	var variable = 5;
+
+	function publicMethod(x, y) { return x + y; }
+
+	return Object.freeze({
+		method: publicMethod
+	});
+})();
+```
+
+The point of all of this is that now, when the user is stupid and does
+`module.method = null`, this will never actually set the actual function defined
+in the function closure to `null`. Thus, other methods depending on the
+definition of the function will not be affected by this modification. With
+`Object.freeze`, we disallow such a change entirely.
+
+## Patterns
+
+### Initialization-Time Branching
+
+Often, we may want to test for availability of certain properties or functions
+on different browsers, systems and environments. For example, there may be three
+ways of adding an event listener for some UI event in a browser, depending on
+the concrete browser in which an event was fired. In such a situation, we
+basically have two ways of *branching* depending on some condition: every time
+we call a function, or once when initializing (defining) the function. The first
+option could look like so:
+
+```JS
+var utility = {
+
+	addListener: function(element, eventName, callback) {
+		// Check if `Element.addEventListener` is available
+		if (typeof element.addEventListener === 'function') {
+			element.addEventListener(eventName, callback, false);
+		} else if (typeof element.attachEvent === `function`) { // IE
+			element.attachEvent('on' + eventName, callback);
+		} else { // Older Browsers
+			element['on' + eventName] = callback;
+		}
+	}
+};
+```
+
+However, we would need to branch depending on the browser environment each time
+we call the function, even though it would be clear from the very first time
+already. As such, the better and more efficient pattern is to perform this
+branching at initialization time:
+
+```JS
+var utility = {}
+
+if (typeof element.addEventListener === 'function') {
+	utility.addListener = function(element, eventName, callback) {
+		element.addEventListener(eventName, callback, false);
+	}
+} else if (typeof element.attachEvent === `function`) {
+   utility.addListener = function(element, eventName, callback) {
+		   element.attachEvent('on' + eventName, callback);
+	}
+} else { // Older Browsers
+	utility.addListener = function(element, eventName, callback) {
+		   element['on' + eventName] = callback;
+	}
+}
+```
+
+Another way to do this would be:
+
+```JS
+var utility = {
+	addListener: (function() {
+		if (/* condition */) return foo;
+		else return bar;
+	})()
+}
+```
+
+### Sandboxing
+
+The *sandboxing* pattern allows us to combine many modules into an isolated
+environment, rather than adding them all to one and only one global object. The
+basic idea is the following:
+
+* We have a set of modules, which allow assignment of their variables and
+  methods to arbitrary objects, simlar to how we implemented modules above.
+* We assign collect all modules available to us in a static property of a
+  `Sandbox` class, which will allow us to later select a number of these modules
+  as necessary.
+* We create a `Sandbox` constructor, which takes a set of dependencies (modules)
+  as well as a callback function making use of the modules' functionality (like
+  `angular.controller`).
+
+This gives us the following possible implementation:
+
+```JS
+function Sandbox() {
+  var args = Array.prototype.slice.call(arguments),
+      callback = args.pop(),
+      modules = (args[0] && typeof args[0] === 'string') ? args : args[0];
+
+  assert(Array.isArray(modules));
+
+  // Transparently ensure the user called `Sandbox()` with `new`
+  if (!(this instanceof Sandbox)) {
+    return new Sandbox(modules, callback);
+  }
+
+  // Add properties that you think all sandbox instances should have
+  this.foo = 5;
+
+  // Passings '*' as a module name should mean "all modules"
+  if (modules[0] === '*') {
+    modules = Object.keys(Sandbox.modules);
+  }
+
+  for (var i = 0, length = modules.length; i < length; ++i) {
+    Sandbox.modules[modules[i]](this);
+  }
+
+  callback(this);
+}
+```
+
+This way, we can create new sandboxed and dependency-injected environments simply by calling the `Sandbox` constructor. Note that we can also nest environments in callbacks, though these nested environments will be entirely isolated from their surrounding sandboxes (a better approach would do it like Angular and pass the dependencies as arguments, so that you could access them from nested sandboxes). We can also add static properties and methods to the prototype:
+
+```JS
+Sandbox.prototype = {
+  constructor: Sandbox,
+  staticVariable: 5,
+  staticMethod: function(value) { return value + 1; }
+};
+
+```
+
+Lastly, we specify the modules like so (for this pattern):
+
+```JS
+Sandbox.modules = {
+  foo: function(module) {
+    module.foo = 5;
+  },
+
+  bar: function(module) {
+    module.bar = function() { console.log("Hello, World!"); }
+  }
+};
+```
+
+
+Resources:
+
+* http://stackoverflow.com/questions/11187582/javascript-sandbox-pattern-example-implementation
