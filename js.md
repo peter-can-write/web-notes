@@ -1222,6 +1222,98 @@ Resources:
   http://stackoverflow.com/questions/1646698/what-is-the-new-keyword-in-javascript
 * https://zeekat.nl/articles/constructors-considered-mildly-confusing.html
 
+### Holy Grail Pattern
+
+We can combine the patterns and methods we saw for creating and inheriting
+classes in "holy grail" function that does it all. This means, given some
+constructor, we can create a function that will inherit that constructor from
+another constructor and do all the boilerplate for us. As such, it will perform
+the tasks of `Object.create`, reset the constructor inside the prototype and
+finally also give our constructor a pointer to its super-constructor
+(super-class). This function looks like so:
+
+```JS
+var inherit = (function() {
+  // The static function declaration kept
+  // in the closure of the returned function
+  var proxy = function () { }
+  return function(child, parent) {
+    // Connect the empty proxy object's prototype with the parent's prototype
+    proxy.prototype = parent.prototype;
+
+    // Create a new empty proxy instance as our prototype
+    child.prototype = new proxy();
+
+    // Set the uber (super) member to point to the parent's prototype
+    child.uber = parent.prototype;
+
+    // Have the prototype's constructor property point back to the constructor
+    child.prototype.constructor = child;
+  }
+})();
+```
+
+We can extend this to a full class-constructor, i.e. a function that creates a
+class for us and optionally extends it from some parent class:
+
+```JS
+function createClass(Parent, properties) {
+  var hasOwn = Object.prototype.hasOwnProperty;
+
+  function Child () {
+    // The parent class (uber) may not be defined
+    if (Child.uber && hasOwn.call(Child.uber, '__construct')) {
+      Child.uber.__construct.apply(this, arguments);
+    }
+
+    // We may omit the __construct method from the properties
+    if (hasOwn.call(Child.prototype, '__construct')) {
+      Child.prototype.__construct.apply(this, arguments);
+    }
+  }
+	
+  // Inherit from Object by default
+  Parent = Parent || Object;
+
+  function Proxy() { }
+  Proxy.prototype = Parent.prototype;
+  Child.prototype = new Proxy();
+  Child.uber = Parent.prototype;
+  Child.prototype.constructor = Child;
+
+  for (var key in properties) {
+    if (hasOwn.call(properties, key)) {
+      Child.prototype[key] = properties[key];
+    }
+  }
+
+  return Child;
+}
+
+// Pass the class to inherit from
+// And an object containing the members to give to the prototype
+var Child = createClass(null, {
+  __construct: function(a, b, c) {
+    this.a = a;
+    this.b = b;
+    this.c = c;
+  },
+	
+  getA: function () {
+    return this.a;
+  }
+});
+
+var child = new Child(1, 2, 3);
+console.log(child.getA()); // 1
+```
+
+Note how we make use of the holy grail pattern to inherit the class. Also, to
+specify that we don't want to extend any class at all, we can simply pass
+`null`, such that the function will pick `Object` as the superclass by
+default. This is perfect, since we'll nevertheless want an empty prototype
+object. In the above pattern, we use custom `__construct` methods to do the actual object initialization. The naming is arbitrary and not important.
+
 ### Static Members
 
 It is important to understand that everything in JavaScript is an object, even
