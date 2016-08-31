@@ -379,6 +379,53 @@ bar(3, 4); // 10
 bar(7, 8); // 18
 ```
 
+### Binding
+
+Another interesting topic concerning functions is *binding* them to an
+object. Recall that when you have a function referring to `this` internally and
+don't call it with object notation or the `new` keyword, `this` will point to
+the global object. Imagine, however, that you want to pass a function that does
+use `this` internally to another function as a callback. In that case, you would
+want to *bind* an object to the function such that you can call it without that
+object as a callback. We can implement such a function `bind`, which takes an
+object and a function to which to bind that object like so:
+
+```JS
+function bind(instance, method) {
+	return function () {
+		return method.apply(instance, arguments)
+	}
+}
+```
+
+Here, we use `apply` rather than invoking the method on the instance directly so
+we can pass the implied `arguments` to the method without knowledge of the
+actual arguments. We can use it like so:
+
+```JS
+function Foo(x) { this.x = x; }
+Foo.prototype.method = function () {
+	console.log(this.x);
+}
+
+var instance = new Foo(5);
+
+var bound = bind(instance, Foo.prototype.method);
+
+bound(); // 5
+```
+
+In ES5, a similar function already exists ready for use:
+`Function.prototype.bind`. This function actually combines the concept of
+binding an instance to a method with currying, as discussed before. It takes an
+instance to bind a method too, as well as any number of argumetns to pass to the
+function when called later:
+
+```JS
+var bound = Foo.method.bind(instance, 1, 2, 3);
+bound();
+```
+
 ### `with`
 
 The `with` statement expands the scope of an object to the current
@@ -1271,7 +1318,7 @@ function createClass(Parent, properties) {
       Child.prototype.__construct.apply(this, arguments);
     }
   }
-	
+
   // Inherit from Object by default
   Parent = Parent || Object;
 
@@ -1298,7 +1345,7 @@ var Child = createClass(null, {
     this.b = b;
     this.c = c;
   },
-	
+
   getA: function () {
     return this.a;
   }
@@ -1312,7 +1359,27 @@ Note how we make use of the holy grail pattern to inherit the class. Also, to
 specify that we don't want to extend any class at all, we can simply pass
 `null`, such that the function will pick `Object` as the superclass by
 default. This is perfect, since we'll nevertheless want an empty prototype
-object. In the above pattern, we use custom `__construct` methods to do the actual object initialization. The naming is arbitrary and not important.
+object. In the above pattern, we use custom `__construct` methods to do the
+actual object initialization. The naming is arbitrary and not important.
+
+### Prototypal Inheritance
+
+It is worth discussing how the prototype mechanism was originally intended to be
+used for the plain, basic prototype design pattern. In this pattern, we inherit
+objects from other objects. As such, given some object `foo`, we would
+protypically inherit from it by creating a new constructor that has its
+`prototype` member set to `foo` and create a new object from that constructor
+immediately. If you recall, this is what `Object.create` does:
+
+```JS
+function inheritPrototypically(base)(base) {
+	function newObject() {}
+	newObject.prototype = base;
+	return new newObject();
+}
+
+var child = inheritPrototypically(base);
+```
 
 ### Static Members
 
@@ -1685,3 +1752,31 @@ Sandbox.modules = {
 Resources:
 
 * http://stackoverflow.com/questions/11187582/javascript-sandbox-pattern-example-implementation
+
+### Testing for Undefined
+
+There are several ways you can check for the existence or non-existence of a
+certain property in an object. For example, you will often want to query the
+global object to see if a certain function `foo` is present. Here are some ways
+to do so:
+
+1. If you want to check if a value has been declared or defined, i.e. if it is
+   present at all, even if its value is undefined (it is was only declared), use
+   the `in` operation to check for object inclusion:
+   ```JS
+   var foo;
+   "foo" in window; // true
+   "bar" in window; // false
+   ```
+2. To check if a value is defined and has a non-undefined value, you can use the
+   `typeof <variable> === "undefined"` check. This will always work, *even if
+   the value was not declared at all*, which is what you will most often be
+   interested in when checking if you can use some symbol.
+
+3. As an alternative to (2), you can use `<variable> === undefined`, where
+   `undefined` is the global `undefined` value. However, this will only work if
+   `<variable>` has been declared! Also, before ES5, `window.undefined` (which
+   is what you reference with `undefined`) could be overriden to something else,
+   like `window.undefined = "foo"`, which would obviously ruin your checks.
+
+So the best way is to use (2) when you want to know if you can use a property.
