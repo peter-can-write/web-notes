@@ -16,7 +16,11 @@ JavaScript file via the `src` attribute of the tag. Optionally, you can also add
 the `type="application/javascript"` attribute. More precisely, the `type`
 attribute is optional in HTML5, but required in HTML4.
 
-http://stackoverflow.com/questions/4243577/which-is-better-script-type-text-javascript-script-or-script-scr
+Note that you will often want to place the `<script>` tag at the end of the `<body>`, such that the JavaScript elements load after the website content and don't block their loading. This is necessary, as the browser will usually download, parse and execute JavaScript synchronously and block, which can hurt he user experience.
+
+Resources:
+
+* http://stackoverflow.com/questions/4243577/which-is-better-script-type-text-javascript-script-or-script-scr
 
 ## Basic Functions
 
@@ -418,7 +422,7 @@ bound(); // 5
 In ES5, a similar function already exists ready for use:
 `Function.prototype.bind`. This function actually combines the concept of
 binding an instance to a method with currying, as discussed before. It takes an
-instance to bind a method too, as well as any number of argumetns to pass to the
+instance to bind a method too, as well as any number of arguments to pass to the
 function when called later:
 
 ```JS
@@ -930,11 +934,89 @@ as `document.body`:
 Note that the DOM is a *live* data structure. This means that if you add a node
 or remove a node from it, this will be reflected *immediately* in the DOM.
 
+Modern browsers provide jQuery-like selector APIs that allow more advanced queries on the DOM than `getElementById` or `getElementsByClassName`. More precisely, the `Document.querySelector()` and `Document.querySelectorAll()` methods allow you to query the DOM w.r.t. any valid CSS selectors. `querySelector` returns the first matching result, `querySelectorAll` returns a `NodeList` of all matching results. You can also pass more than one selector (like in pure CSS) by separating them with commas:
+
+```JS
+<div class="user-panel main"><input name="login"></div>
+
+var element = document.querySelector("div.user-panel.main input[name=login]");
+```
+
 Resources:
 
 * http://www.w3schools.com/js/js_htmldom_document.asp
 
-### Events
+### Remarks
+
+There are some important remarks to be made about DOM manipulation and access. The DOM is actually one of the most expensive data structures to access. Because many web applications need to manipulate it quite a bit, DOM access can become a bottleneck. As such, here are some guidelines for DOM manipulation:
+
+1. Avoid DOM access in loops.
+2. Assign DOM references (especially deeply nested ones) to local references.
+3. Use *selector APIs*.
+4. Cache the *length* property of `HTMLCollection`s.
+
+Regarding the first, this means that you wouldn't want to access the DOM, especially through expensive queries and long property chains, within a loop. Rather, according to (2), it's a better idea to cache the property and perform *bulk updates*. For example, we would always want to replace the following loop:
+
+```JS
+for (var i = 0; i < 100; i += 1) {
+  document.getElementById("result").innerHTML += i + ", ";
+}
+```
+
+with
+
+```JS
+var contents = "";
+for (var i = 0; i < 100; ++i) {
+  contents += i + ", ";
+}
+document.getElementsById('result').innerHTML += contents;
+```
+
+Or, along the lines of (2), the following
+
+```JS
+var padding = document.getElementById("result").style.padding,
+    margin = document.getElementById("result").style.margin;
+```
+
+should be replaced by
+
+```JS
+var style = document.getElementById("result").style,
+    padding = style.padding,
+    margin = style.margin;
+```
+
+As mentioned, batch updates are always a good idea, as you only need to update the live DOM tree once. For this, the `documentFragment` class can come in handy. It is basically a lightweight node you can attach other nodes to, to link an entire small tree into the DOM, rather than each child individually. For example:
+
+```JS
+var fragment = document.createDocumentFragment();
+var p = document.createElement('p');
+var t = document.createTextNode('first paragraph');
+p.appendChild(t);
+fragment.appendChild(p);
+
+p = document.createElement('p');
+t = document.createTextNode('second paragraph');
+p.appendChild(t);
+fragment.appendChild(p);
+
+document.body.appendChild(fragment);
+```
+
+Lastly, note that it is often a good idea to retrieve a node in the DOM, clone it with `Node.cloneNode()`, work on it "offline" and then replace the original node in the live tree:
+
+```JS
+var node = document.getElementById('node'),
+    copy = node.cloneNode();
+
+copy.appendChild(document.createElement('p')))
+
+node.parentNode.replaceChild(copy, node);
+```
+
+## Events
 
 HTML and JavaScript have a very nice event-listening mechanism built
 in. There are two ways of doing this: inline in HTML or out-of-line, purely in
@@ -1034,13 +1116,56 @@ function addEvent(element, eventName, callback, useCapture) {
 	} else {
 		element.addEventListener(eventName, callback, useCapture);
 	}
-
 }
 ```
 
 Resources:
 
 * http://stackoverflow.com/questions/6348494/addeventlistener-vs-onclick
+
+### Performance Enhancements for Long-Running Scripts
+
+Imagine you have some heavy, long-running JavaScript code that is consuming large amounts of time resources and blocking your browser from loading other elements, to the detriment of the user experience. How do you solve this? There are multiple ways.
+
+### Timeouts
+
+The first idea is to break your code into chunks and delay their execution. You can do this with the `window.setTimeout` function, which takes a function to execute after a certain delay, specified in milliseconds, and optionally any number of parameters to pass to the function. It returns a global `timeoutID` to identify the timer, such that you can cancel the timeout using `window.clearTimeout(timeoutID)`.
+
+```JS
+// Execute after one second
+window.setTimeout(function() {
+  /* ...  */
+}, 1000);
+
+// Execute after two seconds
+window.setTimeout(function() {
+  /* ...  */
+}, 1000);
+```
+
+### Web Workers
+
+*Web Workers* are an advanced and relatively new multi-threading technique available in modern browsers (e.g. IE10+). To use it, you instantiate a new `Worker` instance, which takes the URL of a script to execute in a background thread. The thread will then proceed to execute the JavaScript in that file:
+
+```JS
+var worker = new Worker('some_code.js'); // Executes immediately
+```
+
+The Web Worker API also provides methods for communication of any kind of data between threads. For this, you can use the `worker.postMessage()` function either from inside the worker, to send a message to the caller, or from the caller side, to send a message to the worker. The other side can then subscribe to these messages via the `worker.onmessage` callback property:
+
+```JS
+// some_code.js
+postMessage('foo');
+postMessage(1);
+
+// main.js
+var worker = new Worker('some_code.js');
+worker.onmessage = function(event) {
+  console.log(event.data);
+}
+```
+
+Note how the callback we pass for the `onmessage` event takes an `event` argument. This object is of type `MessageEvent`, and thus has properties such as `data`, which is the most important one as it contains whatever the other side posted; but also `origin` and others. Next to the `onmessage` event, there exists also `onerror`, which is called for any exceptional (error) condition inside the worker and takes an error `Event` as its argument.
 
 ## Object-Oriented Programming
 
@@ -1615,6 +1740,109 @@ in the function closure to `null`. Thus, other methods depending on the
 definition of the function will not be affected by this modification. With
 `Object.freeze`, we disallow such a change entirely.
 
+## AJAX
+
+AJAX stands for *asynchronous javascript and XML* and is a programming technique more than a standard. Its basic idea is to make HTTP requests from client-side JavaScript to the server, for example to retrieve new images for a slideshow or any other kind of data that doesn't require to reload the page. Also, the transferred data definitely need not be XML, but can be JSON (most common today) or any other data format, given you have an appropriate library. In modern JavaScript, AJAX is handled mainly through `XMLHttpRequest` objects, which we will investigate in the paragraphs below.
+
+### XMLHttpRequest
+
+`XMLHttpRequest` objects are the core of AJAX in JavaScript today. They allow for asynchronous HTTP requests to a server, from client-side JavaScript. There are three main steps to sending such a request:
+
+1. Create a new request object.
+2. Setup a callback function to be executed on a state change w.r.t. the request, e.g. when the response is ready.
+3. Specify the HTTP method and destination.
+4. Send the request.
+
+The hassle starts with (1), as Internet Explorer, obviously, has an entirely different mechanism for AJAX before IE7. As such, when we want to create a new request object, we'll have to use code following this pattern:
+
+```JS
+var request;
+if (window.XMLHttpRequest) { // IE7 and other browsers
+  request = new XMLHttpRequest();
+} else if (window.ActiveXObject) { // IE6 and older
+  request = new ActiveXObject('Microsoft.XMLHTTP');
+} else {
+  throw {
+      name: "RequestError",
+      message: "Could not find object to create request with!"
+  };
+}
+```
+
+Next, we have to setup our callback function for state changes. We speak of *state changes*, because there are several states in a request-response cycle. First, let's see how we register a function. For this, we assign the `onreadystatechange` property to a callback of our choosing, which takes no arguments. Inside, we can query the request object's `readyState` to see if it's value is 4, which means *complete* (i.e. ready to be inspected). Other values include:
+
+* 0: *UNSENT*, which means the request has been created, but not opened yet.
+* 1: *OPENED*, when the request has been opened but not sent yet.
+* 2: *HEADERS_RECEIVED*, when `send()` has been called and the response *headers* have been received.
+* 3: *LOADING*, when the response body is being received.
+* 4: *DONE*, when the entire, complete body is ready for inspection, or an error occurred.
+
+Note that the names of these states are different in Microsoft  ([Reference](https://developer.mozilla.org/en-US/docs/Web/API/XMLHttpRequest/readyState)). Assuming the names above, you can use the `XMLHttpRequest` constants for each state, e.g. `XMLHttpRequest.DONE`, to make your checks. However, for cross-browser compatibility, the numbers may be a better option (`4` will always indicate a fully received reponse).
+
+```JS
+request.onreadystatechange = function() {
+  if (request.readyState !== 4) return;
+  if (request.status !== 200) {
+    alert('Error! Status code: ' + request.status);
+    return;
+  }
+
+  alert('Response well received!');
+
+  /* ... */
+
+  return;
+}
+```
+
+Note how the request object has a `status` property. Other interesting properties you can read or write before or after the request (possibly to get information about the response) include:
+
+* `statusText`: A human-readable message associated with the status (e.g. `'OK'`).
+* `timeout`: A timeout in milliseconds for the request.
+* `abort()`: which aborts the request after it has been sent. This changes the `readystate` of the request to 0 (UNSENT), without firing a `readystatechanged` event.
+
+Next, we deal with creating and sending the request. For this, we use two methods: `open()` and `send()`. The former configures the request, the latter sends it. Let's look at `open()` first. It takes the following parameters:
+
+* `method`: A string describing the HTTP method, such as `'GET'` or `'POST'`.
+* `url`: A string describing the URL for the request.
+* `async`: A boolean indicating whether or not the request should be asynchronous, defaulting to `true`.
+
+Note especially that there is restriction on the request target URL, enforced by all browsers, that it must point to the same domain. That is, you cannot make HTTP requests to any other domain (`domain.tld`) other than your own. This is for security purposes. For alternatives and workarounds, see [here](https://developer.mozilla.org/En/HTTP_access_control).
+
+```JS
+request.open('GET', 'my-domain.io/foo/bar/baz', true);
+```
+
+Lastly, the `send()` method sends off the request. Its only optional parameter is any data you want to send with the request, such as for `POST` requests. For this, `send()` can, for example, take URL parameters in the `key=value&key=value` format, or form data. Note that you will often want to configure the content type in the header via `XMLHttpRequest.setRequestHeader('Content-Type', '<type>')`, where `<type>` may be `application/x-www-form-urlencoded`, for example:
+
+```JS
+request.send('key=value&foo=bar');
+```
+
+Note that with `XMLHttpRequest.setRequestHeader(key, value)` we can set any
+key-value header pair. Inside our state-change handler, we naturally wait for
+the response to be received and completed. Once the response has been
+well-received, we can access it via the `response` property of our request. This
+is the raw data the peer sent, which could be a string, an array, json or
+anything else (depending on the content-type header). Moreover, the
+`responseText` contains the response as a string, irrespective of its actual
+type, while `responseType` tells what the type of the response data is (e.g.
+`'json'`):
+
+
+```JS
+request.onreadystatechange = function () {
+  if (request.readystate !== XMLHttpRequest.DONE) return;
+  if (request.status !== 200) {
+    alert('Error! Status code: ' + request.status);
+    return;
+  }
+
+  console.log(request.responseType); // e.g. 'json'
+  console.log(request.response); // e.g. { "foo": 5 }
+}
+```
+
 ## Patterns
 
 ### Initialization-Time Branching
@@ -1748,7 +1976,6 @@ Sandbox.modules = {
 };
 ```
 
-
 Resources:
 
 * http://stackoverflow.com/questions/11187582/javascript-sandbox-pattern-example-implementation
@@ -1768,6 +1995,7 @@ to do so:
    "foo" in window; // true
    "bar" in window; // false
    ```
+
 2. To check if a value is defined and has a non-undefined value, you can use the
    `typeof <variable> === "undefined"` check. This will always work, *even if
    the value was not declared at all*, which is what you will most often be
