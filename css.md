@@ -13,6 +13,8 @@ composed of the following basic elements:
 * *Values*, which give a property (key) a concrete value, such as the color
   `red` for the `color` property, which modifies a website's text font color.
 
+Moreover, you may use `/* ... */` for comments.
+
 ## Colors
 
 There exist multiple ways to specify colors in a CSS document. Often, they will
@@ -92,6 +94,18 @@ interesting variants:
 * `[key=value]`: selects all elements wit the specified attribute set to the
   given value.
 
+Note that there is special syntax for *chaining* classes. That is, if you want to apply styles only to elements that are in class `.a` *and* class `.b`, then you must use `.a.b` as your selector:
+
+```html
+<a href="google.com" class="foo bar baz"></a>
+```
+
+```css
+.foo.bar.baz {
+  color: black;
+}
+```
+
 ## Properties
 
 ### `background-size`
@@ -136,6 +150,20 @@ The URL inside the `url()` function call may be singly or double quoted, or not
 quoted at all. Moreover, the URL may be relative rather than an absolute
 hyperlink. If so, it is relative to the stylesheet and not the linked HTML file
 (since many HTML files may link to the same stylesheet).
+
+### `@import`
+
+CSS has the `@import` *directive*, which allows you to include the contents of another CSS file into the current one. It takes a URL and literally includes everything from that file into the current one:
+
+```css
+@import url('/path/to/file.css');
+```
+
+Moreover, you may append a media query list to only conditionally include the file:
+
+```css
+@import url('/path/to/file.css') screen and (orientation:landscape);
+```
 
 ### `display`
 
@@ -187,3 +215,22 @@ for `position` are:
 * `fixed`, leaves the element positioned in its original location, taking up no
   space as the rest of the page flows "through" it. This is especially useful
   for "sticky" `div`s such as headers or footers.
+
+## Media Queries
+
+Media Queries are a CSS feature that allow you to query properties about the device on which your website is being viewed on and conditionally define certain CSS rules. For this, you use the `@media` directive, followed by zero or more expressions, expressed as media features (such as width, height or orientation) that each evaluate to a boolean value and that you can combine using boolean operators. The operators allowed are `and`, the comma as an `or` and lastly `not`. For example:
+
+```css
+@media (min-width: 500px), handheld and (orientation: landscape) {
+  /* ... */
+}
+```
+
+This query will match if the width of the device with which the content is being viewed is at least 500 pixels, or the `handheld` feature is defined, and the orientation must be in landscape mode (as opposed to portrait). Other media features include:
+
+* `width`
+* `height`
+* `resolution`
+* `color` (the number of bits per color).
+
+Reference is [here](https://developer.mozilla.org/en-US/docs/Web/CSS/Media_Queries/Using_media_queries).

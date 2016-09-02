@@ -159,7 +159,7 @@ Directives generally follow the CSS class naming convention of
 names-separated-by-dashes. For example, the `ng-model="foo"` attribute will
 attach a listener on an HTML element, often an `<input>` tag, that will
 associate the contents of the tag with a property in the current scope
-(i.e. $scope.property$).
+(i.e. `$scope.property`).
 
 There are four kinds of directives, which exist pre-built for certain use cases
 by Angular, but which, most importantly, you an also define yourself. As such,
@@ -196,8 +196,7 @@ Some common and useful built-in directives are:
   event listening (like `onclick`).
 * `ng-init="key=value; key=value; ..."` Allows initialization of a set of values
   within a scope (just use the controller constructor).
-* `ng-model="<name>"`: Binds the innerHTML of an element to a property in the
-  current scope. This is especially useful for `<input>` tags.
+* `ng-model="<name>"`: Binds an input, select or textarea element to a property in the current scope. This is especially useful for `<input>` tags.
 * `ng-bind="<name>"`: Replaces the innerHTML of an element with the given
   *expression*. It is equivalent to using `{{ expression }}` inside the tags.
 
@@ -580,7 +579,7 @@ We use the `$routeProvider.when` method to associate a URL with some
 configuration information. Note also how, at the end, we route all URLs that
 don't match `/`, `/foo` or `/bar` back to `/` with the `redirectTo` function. We
 could then basically define a whole new HTML page for each view and have a whole
-new controller fo reach page, which means a new scope and new variables.
+new controller for each page, which means a new scope and new variables.
 
 Resources:
 

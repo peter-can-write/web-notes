@@ -151,7 +151,7 @@ document and linked resource. This relationship is often `stylesheet` for CSS
 files, but many other options, such as `help` for help files, exist. Also, for
 favicons, you will often have a `link` tag with the `rel="icon"` attribute
 set. Note, however, that for apple devices you must use `apple-touch-icon`
-rather than `icon` as the relationship value.
+rather than `icon` as the relationship value. Lastly, it's often a good idea to add the `media="screen"` attribute to specify that the linked file is suitable for display on screens, as opposed to `media="print"`.
 
 ### MIME
 
@@ -237,3 +237,12 @@ value to be selected other than the internal text:
 	<option>Third</option>
 </select>
 ```
+
+### `<input>`
+
+The `<input>` tag is used for form input, most often used inside the `<form>` tag. The input can take on many forms, such as buttons (legacy, use `<button>`) now, text, checkboxes and more. Inputs in a form are usually sent via POST requests to the web server. It has the following interesting attributes:
+
+* `type`: Specifies the type of input it is, such as `button`, `text`, `checkbox` or others.
+* `name`: The name (key) for the input in the form data transmitted.
+* `value`: An initial value, e.g. for a text field. It is required for radio and checkboxes.
+* `placeholder`: For text input, grayed out text as a hint to the user.

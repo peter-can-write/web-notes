@@ -1167,6 +1167,71 @@ worker.onmessage = function(event) {
 
 Note how the callback we pass for the `onmessage` event takes an `event` argument. This object is of type `MessageEvent`, and thus has properties such as `data`, which is the most important one as it contains whatever the other side posted; but also `origin` and others. Next to the `onmessage` event, there exists also `onerror`, which is called for any exceptional (error) condition inside the worker and takes an error `Event` as its argument.
 
+### Lazy Loading
+
+JavaScript scripts are executed when the browser parses a `<script>` tag. As such, if we can define ourselves when the `<script>` for a given piece of JavaScript code is added to the DOM, we can, in fact, determine ourselves when a script should be loaded and executed. This simple pattern can be implemented in various ways, which we will discuss next.
+
+The simplest way is to simply dynamically add a `<script>` tag to the `<head>` section of our HTML document when we need it. For this, we create a new script element and set its `src` attribute to the file we want to load. Upon seeing this tag, the browser will make a new request to the server to ask for the script, which is executed *only then*:
+
+```JS
+var script = document.createElement('script');
+script.src = '/path/to/file.js'
+document.documentElement.firstChild.appendChild(script);
+```
+
+where `document.documentElement` is the `<html>` tag and its first child (usually) the `<head>` tag. Note that theoretically, we don't always know if we have a `<head>` tag, so the safest checkpoint we have is any `<script>` tag, since we know we must have at least the `<script>` tag in which the code lives that we are currently executing. As such, this is safer:
+
+```JS
+// or querySelector('script');
+var anchor = document.getElementsByTagName('script')[0];
+anchor.parentNode.insertBefore(script, anchor);
+```
+
+Of course, we must ask when we add the script tag to the document at all. For this, we have two options. For one, we can simply add it when the page loads for the first time. This can be achieved via the `window.onload` event:
+
+```JS
+window.onload = function() {
+  /* load and append script */
+}
+```
+
+However, another option would be to be even lazier and only load certain scripts for certain events, such as a button-press. For this, we can define a `require()` function that takes the file path of a script to load and a callback function to execute as soon as that script has loaded (to initialize some page-specific things, for example):
+
+```JS
+function require(file, callback) {
+  var anchor = document.getElementsByTagName('script')[0],
+      script = document.createElement('script');
+
+  // Default
+  callback = callback || function() {};
+
+  // IE
+  script.onreadystatechange = function() {
+    if (script.readyState === 'loaded' || script.readyState === 'complete') {   
+      script.onreadystatechange = null;
+      callback();
+    }
+  }
+
+  // Others
+  script.onload = callback;
+
+  // Dynamically add the script
+  script.src = file;
+  anchor.parentNode.insertBefore(script, anchor);
+}
+```
+
+and then:
+
+```JS
+var button = document.getElementsById('my-button');
+button.onclick = function() {
+  require('my-script.js')
+}
+```
+
+
 ## Object-Oriented Programming
 
 JavaScript has object-oriented programming concepts on the basis of *prototypal*

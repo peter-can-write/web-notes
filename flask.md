@@ -95,7 +95,7 @@ Here we supplied the integer `5` as the placeholder, which would be shown in the
 
 There are some more concepts related to templates which we will explore in the following paragraphs.
 
-### More Directives
+### Syntax
 
 #### For loops
 
@@ -120,6 +120,13 @@ and will evaluate to:
 ```HTML
 <em>1</em>
 <em>2</em>
+```
+
+Note that there is one particular difference between Python and Jinja in terms of accessing dictionary properties. In Python, the only way to retrieve the value for a given key in a dictionary is the `dict['key']` syntax. This is also allowed in Jinja templates of course. However, additionally, in Jinja we are allowed to use the `dict.key` dot syntax like in JavaScript. As such, the following two statements are the same:
+
+```HTML
+{{ dict['key'] }}
+{{ dict.key }}
 ```
 
 #### Inheritance and Blocks
@@ -258,6 +265,17 @@ Resources:
 * http://stackoverflow.com/questions/3948975/why-store-sessions-on-the-server-instead-of-inside-a-cookie
 * http://stackoverflow.com/questions/32909851/flask-session-vs-g
 
+## Request
+
+Inside a Flask endpoint, you will often want to make use of the application-specific `flask.request` object, which stores information about the current request (the one being handled right now). You can use this request object to access URL parameters (for a REST-ful webservice), cookies, headers, uploaded files and also check the method used for the request. The latter is especially interesting to differentiate between POST and GET requests under the same endpoint. The `request` object is of `Flask.Request` type, which has the following interesting properties:
+
+* `args`: The URL parameters passed after the question mark (`URL/?key=value`), in a dictionary.
+* `headers`: The headers of the request, in a dictionary.
+* `form`: Form data transmitted in the body of a POST request (with appropriate `x-www-form-urlencoded` content type), as a dictionary.
+* `cookies`, as a dictionary.
+* `method`: The method of the request, as a string.
+* `files`: Files sent with the request. Note especially that these will not end up in the form data. They are stored as `Flask.FileStorage` files, behave like regular Python files, but have a `save(<file-path>)` method to save them to disk.
+
 ## Flashing
 
 Message flashing is a simple communication method built into Flask to store
@@ -326,9 +344,27 @@ def endpoint():
     return response
 ```
 
-# Methods
+## Static Files
 
-## `url_for`
+It is important to understand that Flask is, at the core, a web *framework*, not a web *server*. The difference is that a web server like nginx or Apache are C/C++ applications that handle the actual TCP connections and HTTP header parsing. Once it has parsed these headers, it would communicate with an intermediary web server like Gunicorn via the common gateway interface (CGI) or web server interface (WSGI) to move from the C/C++ domain to Python. Lastly, in Python, we have web frameworks like Flask, that handle dynamic response generation based on the request contents. As such, web servers can be seen as reverse proxies to the web framework. The reason why this discussion is relevant is that next to HTTP request handling, web servers like nginx also often handle static file serving. That is, it will serve static files like images or CSS stylesheets for you and only pass requests on to the web framework (Flask) for dynamic content generation. This is good, because web servers like nginx are usually quite fast. However, the bottom line is that Flask can also act as a web server and serve static content for you.
+
+To serve static content in Flask, you can make use of the special `static` endpoint and pass the file path as a parameter to `flask.url_for`. Finally, you would simply redirect to that generated URL and Flask will do the rest for you:
+
+```py
+@app.route('/')
+def index():
+  return flask.redirect(flask.url_for('static', filename='foo/bar/baz'))
+```
+
+This will retrive the file from the `root/static/` path, i.e. here `root/static/foo/bar/baz` where `root` is your application's root folder.
+
+Resources:
+* http://flask.pocoo.org/docs/0.11/quickstart/#static-files
+* https://www.quora.com/What-is-the-difference-between-a-web-server-and-a-web-framework
+
+## Methods
+
+### `url_for`
 
 The `url_for` method will retrieve the url for a given *endpoint* for you. That is, if you have some endpoint function to which you're routing a URL like so:
 
@@ -339,7 +375,7 @@ def endpoint(): pass
 
 Then calling `flask.url_for(endpoint [, parameters])` will return the URL string for this endpoint, as specified in the `<url>` argument to `app.route()` in the decorator above the endpoint itself. You can use this as an argument to `flask.redirect`.
 
-## `redirect`
+### `redirect`
 
 The `flask.redirect` method will redirect the application to a new URL via an HTTP redirect. As such, the exact signature of this method is:
 
@@ -349,7 +385,7 @@ flask.redirect(location, code=302, Response=None)
 
 where `location` is a string describing the URL where to redirect to, `code` is the HTTP code to use for the generated redirect response and lastly an optional custom `Response` class to use when instantiating the response.
 
-## `abort`
+### `abort`
 
 Use `abort` to simply interrupt the current request to raise an `HTTPException`, which will be handled by Flask accordingly. This means it will serve the correct content for the given error code, which is the `abort` functions only argument:
 
@@ -358,3 +394,7 @@ Use `abort` to simply interrupt the current request to raise an `HTTPException`,
 def foo():
   abort(404) # fuck you
 ```
+
+### `run`
+
+The main entry point into your application, if you don't use the Flask `cli` utility, is `Flask.run()`. It optionally takes a `host` parameter, which is the IP address or hostname to listen on. It default to localhost, or `127.0.0.0`. Then, there is the `port` parameter, which defaults to 5000. Lastly, you can set `debug` to `True` for debug output.
