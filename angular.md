@@ -41,7 +41,7 @@ separated via colons:
 {{ some_data | filter1 : arg1 : arg2 | filter2 : arg1 | ...}}
 ```
 
-Other filters include:
+Other [built-in filters](https://code.angularjs.org/1.5.8/docs/api/ng/filter) include:
 
 * `number:precision`: Formats numbers (e.g. infinity to the unicode character)
   and takes a decimal `precision` argument to determine the number of digits
@@ -239,7 +239,7 @@ with the directive. This can be done in three ways:
      time it encounters a directive of this kind in your view. As such, don't
      think you'll be able to do something for *each* element with this
      directive.
-   - `attributes`: The attributes of your the element in an object.
+   - `attributes`: The attributes of the element in an object.
    ```JS
    return {
 	templateUrl: function(element, attributes) {
@@ -266,7 +266,7 @@ another name for tag directives.
 Besides inserting custom HTML, we can also pass argument to a directive via
 attributes. For this, we must create a new *isolate scope*. An isolate scope is
 a scope created specifically for a directive, isolated entirely from its outside
-environment (scope). This isolation is two-way: no variables define for the
+environment (scope). This isolation is two-way: no variables defined for the
 scope (we'll see how) will ever be visible outside the directive's environment,
 but also no variables defined outside the scope of the directive (e.g. in the
 scope of the controller, initialized in the corresponding constructor) will be
@@ -306,7 +306,7 @@ of the isolated scope:
   attribute, then you get a reference to that attribute and can modify it. If
   you do so, you change the value in the directive scope *and* in the parent
   scope (it is a reference to that parent scope's value). You cannot use Angular
-  expressions (`{{...}}`) in this mode.
+  expressions (`{{...}}`) in this mode. Note that whatever you pass will be interpreted as a property in the parent scope. You cannot pass constants! Use `@` for that.
 * `@<optional name>`: Creates a uni-directional binding between the interpolated
   string passed as the value and the directive. That is, you *can* use an
   expression like `foo="{{ bar }} baz"` and you will get the interpolated
@@ -322,7 +322,7 @@ of the isolated scope:
   scope. For example, if we have a variable local to the directive called `baz`,
   we can call the function from the parent scope via `foo({arg: baz})`.
 
-Other properties we can give the returned object are:
+Furthermore, setting `scope: true` will simply inherit all variables from the parent scope, while setting `scope: {}` will create an isolated, empty scope ([reference](http://stackoverflow.com/questions/24528388/what-is-the-difference-between-scope-and-scopetrue-inside-directive)). Other properties we can give the returned object are:
 
 * `priority`: a metric to tell the Angular compiler what directives to inspect
   first. By default, this value is zero. Higher priority directives are compiled
@@ -352,7 +352,7 @@ server. Other services built into Angular are:
 * `$interval(function, time, count)`: Calls the `function` repeatedly after `time`
    milliseconds, at most `count` times. If `count` is `undefined` or zero, loops
    indefinitely.
-* `$log`: Provides some loggin functionality to log errors, warning or simple
+* `$log`: Provides some logging functionality to log errors, warning or simple
   messages to the browser console, if present.
 * `$animate`: Used for animation on the DOM.
 * `$location`: Which allow inspection and manipulation of the URL.
@@ -362,7 +362,7 @@ used to declare the `scope` variable to add properties to a controller's scope,
 we can now have more dependencies. Again we would specify them before the
 service function and then take them as arguments in that service function.
 
-Do declare your own service which you can reuse across your components, you have
+To declare your own service which you can reuse across your components, you have
 several options. All of these depend on the `$provide` service, which is the
 most basic interface for creating a service. More precisely, there are three
 elements to the creation of a service:
@@ -636,9 +636,9 @@ app.controller('myController', ['$scope', function($scope) {
 
 Note that we will often want to connect these events to Angular's DOM
 manipulation functionality, provided by `ng-show`. This property, `ng-show`,
-takes a boolean and shows (`true`) or hides (`false`) an element dependding on
+takes a boolean and shows (`true`) or hides (`false`) an element depending on
 its value. For example, we could change some internal boolean property on an
-`ng-click` event, which we simply assign as the vlaue of the `ng-show`
+`ng-click` event, which we simply assign as the value of the `ng-show`
 attribute to another element.
 
 ```JS
@@ -653,3 +653,58 @@ app.controller('myController', ['$scope', function($scope) {
 Resources:
 
 * http://www.w3schools.com/angular/angular_events.asp
+
+### The `$digest` Cycle
+
+Whenever we speak of events, we usually speak of model changes -- updates to our application's state. For example, we may have some model variable in our scope (`$scope.variable`), that we change when the user clicks a button. One question we may have at this point relates to the expressions we may have set up in our view that listen for changes to that variable. That is, if we have some expression `{{ variable }}` and the `variable` changes, how does Angular know to update the inner HTML of that expression?
+
+This is where the `$digest` cycle comes in. For any given `scope`, calling `scope.$digest` will check for changes on any model variables in that scope. However, first, let us review how we can even watch for changes at all. Of course this is always possible through Angular's built-in directives. However, to do so manually, we may use the `scope.$watch` function. This function takes an expression which evaluates to the value (variable) that should be watched. Most often, this will be simply a string containing the name of that variable. However, it could also be a function. Furthermore, the `$watch` function takes a listener function that is called with the new and old value every time the value of the variable changes. Lastly, you may pass a boolean `true` (default is `false`) if variable changes should be determined via object equality (using angular.equals) rather than reference equality (using `===`):
+
+```JS
+$scope.variable = 5;
+$scope.$watch('variable', function(newValue, oldValue) {
+  /* ... */
+});
+
+// or
+
+$scope.$watch(
+  function() { return $scope.variable; },
+  function(newValue, oldValue) {
+  /* ... */
+});
+```
+
+So now we know how we can manually setup a listener on a model variable. However, the question remains when it will be called. As mentioned, this depends on the `$scope.$digest` function. When it is called, all variables in the model (for which listeners have been setup) will be inspected for changes. If a change occurred, the corresponding listener is executed. As such, if we manually change our model in a listener not setup with an Angular directive (e.g. with a simple `onclick=` rather than `ng-click`), we would have to manually `$digest` our scope again. In fact, when we do so, we'll probably want to call `$scope.$apply` rather than `$scope.$digest`, as the former calls `$digest` on the root scope (`$rootScope`), such that any changes are propagated through the whole DOM. For example, if you setup a timeout manually using `setTimeout` (rather than using the `$timeout` service, which handles digesting for you), you would want to call `$apply()` to update your views.
+
+More precisely, there are two forms of `$apply`: one taking no argument, that simply calls `$digest` on the root scope and one that takes the function (possibly) producing the change. In that second case, `$apply` will wrap the all in a `try ... catch` block and forward messages to the `$exceptionHandler` service. Then, after the function you pass executes, the actual `$apply` (with no arguments) will be called:
+
+```JS
+setTimeout(function() {
+  $scope.$apply(function() {
+    /* ... Any updates ... */
+  });
+}, 2000);
+```
+
+This will run a digest cycle after the inner function (passed to `$apply`) has been evaluated. The other possibility is:
+
+```JS
+setTimeout(function() {
+  function() { /* ... */ }
+  $scope.apply();
+}, 2000);
+```
+
+What you really only need to know is that there is such a thing as a `$digest`
+cycle and that it is critical to Angular's mechanism for updating the view
+w.r.t. the model. Moreover, it should be mentioned that for every call to
+`$digest`, your model is not only inspected for changes once. The reason why is
+that listeners may themselves cause updates to the model. As such, the digest
+cycle involves at least two variable inspections: one when first called and one
+after all listeners (watcher) have been evaluated. Also, you should know how and why to call `$apply` when implementing your own listeners: `$apply` for global changes, `$digest` for local changes to the current scope and its children (but not its parents).
+
+Resources:
+
+* https://www.sitepoint.com/understanding-angulars-apply-digest/
+* http://www.jstips.co/en/angularjs-digest-vs-apply/

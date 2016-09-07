@@ -316,6 +316,12 @@ plain array. For example, we can replace `Math.max(1, 2, 3, 4, 5)` with
 useful for large arrays (though note that there exists a hard-coded limit on the
 number or parameters of a function).
 
+Note that it may sometimes be useful to use `apply` and `call` on constructors. For this reason, consider returning `this` from inside the constructor, so you can do something like this:
+
+```JS
+var object = Constructor.apply({}, arguments);
+```
+
 #### Lambdas
 
 Since ES6 you can use lambdas, here called *arrow functions*. They have the
@@ -878,7 +884,7 @@ as:
   `setNamedItem()`.
 * `Element.hasAttribute(key)`: Checks if the element has the given attribute
   set.
-* `Element.setAttribute(key, value)`: Sets the given attribute.
+* `Element.setAttribute(key, value)`: Sets the given attribute. *Use it to add new attributes!*. Pass an empty string as `value` to set a boolean attribute.
 * `Element.getAttribute(key)`: Gets the given attribute.
 * `Element.attribute`: Accesses the given attribute (with dot notation) for
   reading and writing.
@@ -1067,7 +1073,8 @@ Taking advantage of the fact that `undefined` values evaluate to `false`.
 
 Other possible events are:
 
-* `onmouseover`: Triggered when the user moves the mouse over an element.
+* `onmouseenter`: Triggered when the user moves from a parent element over the element (i.e. only from the outside, not from other elements inside).
+* `onmouseover`: Triggered when the user moves the mouse over an element, either from a parent or from a child (i.e. from anywhere)
 * `onmouseout`: Triggered when the user moves the mouse away from an element.
 * `onmousedown`: Triggered when the user clicks an element. When the user
   releases the mouse key, the `onclick` event triggers.
@@ -1944,11 +1951,11 @@ branching at initialization time:
 ```JS
 var utility = {}
 
-if (typeof element.addEventListener === 'function') {
+if (typeof window.addEventListener === 'function') {
 	utility.addListener = function(element, eventName, callback) {
 		element.addEventListener(eventName, callback, false);
 	}
-} else if (typeof element.attachEvent === `function`) {
+} else if (typeof window.attachEvent === `function`) {
    utility.addListener = function(element, eventName, callback) {
 		   element.attachEvent('on' + eventName, callback);
 	}

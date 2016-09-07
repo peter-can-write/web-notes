@@ -70,7 +70,6 @@ Resources:
 
 *
   http://stackoverflow.com/questions/22397030/difference-between-screen-size-and-screen-density-in-android
-*
 
 ## Selectors
 
@@ -234,3 +233,72 @@ This query will match if the width of the device with which the content is being
 * `color` (the number of bits per color).
 
 Reference is [here](https://developer.mozilla.org/en-US/docs/Web/CSS/Media_Queries/Using_media_queries).
+
+## Transitions
+
+CSS3 adds the ability to configure and control *transitions* from one style to another. Using this functionality, we can specify that whenever a certain property of an element changes, it should behave in a certain way. More precisely, imagine you have some `div`, that changes width on a hover event:
+
+```CSS
+div {
+  width: 10px;
+}
+
+div:hover {
+  width: 100px;
+}
+```
+
+Currently, the transformation from 10 pixels to 100 pixels will be sudden and abrupt. We can add a *transition* effect to make this transition more smooth. For this, CSS3 has four properties we can set:
+
+* `transition-property: <property>`: Register a property (like `width`) for transition watching.
+* `transition-duration: <time>`: Whenever the state of the property changes, it should take this long to do so, like `2s`.
+* `transition-delay: <time>`: Whenever the state of the property changes, delay any change by this amount.
+
+The fourth property is `transition-timing-function`, which specifies how the transition should behave, i.e. if it should start slowly and then transition fast, or end slowly etc. There are multiple ways of configuring this property:
+
+* `linear`: The transition should be equally fast throughout.
+* `ease` (default): Slow start, then fast, then slow end.
+* `ease-in`: Slow start, then steady.
+* `ease-out`: Steady, then slow end.
+* `ease-in-out`: Slow start, then steady, then slow end.
+* `cubic-bezier(x1, y1, x2, y2)`: Lets you define your own cubic bezier function. Basically, imagine a function going from 0 (start of the transition) to 1 (end of the transition), then
+  - `x1, y1` are the coordinates of the first bezier node,
+  - `x2, y2` are the coordinates of the second bezier node.
+  All of these coordinates must be between zero and one. It is best to configure them here: http://cubic-bezier.com/#.17,.67,.95,.7
+
+Lastly, note that the `transition: <property> <duration> [delay [function]]` property allows you to aggregate these properties.
+
+## Animations
+
+Transitions are actually just a subclass of a broader, more general concept, called *animations*. Basically, a transition is a single animation from one state to another. However, animations can have many steps in between, giving you a lot more control. More precisely, in CSS3, the animation syntax involves the following:
+
+* A `@keyframes <name> { /* ... */ }` directive, where you specify what the animation does.
+* An `animation-duration: <time>` property.
+* An `animation-delay: <time>` property.
+* An `animation-timing-function: ease | ease-in | linear | ...` property.
+* An `animation-iteration-count: <number>` property, where you specify how often the animation should be performed.
+* An `animation-duration: <time>` property.
+* An `animation-direction`, which specifies in what order the animation should be performed. Allowed values are:
+  - `normal`: The regular, "forward" order,
+  - `reverse`: Reverse order.
+  - `alternate`: Start with the regular order, but if the iteration count is greater one, change the order for the second time and then alternate.
+  - `alternate-reverse`: Alternate, but start in reverse order.
+* `animation-name: <name>`: The name of a `@keyframe` directive you defined somewhere, to apply the animation to the current selector. Note that an animation will always apply to the current selector. There is no way to specify an animation for a certain property, that is only for transitions.
+
+Note that an important difference between transitions and animations is that animations will "play" immediately, while transitions only occur when a property (or `all`) *changes*.
+
+Inside the `@keyframes` directive, you use percentages to specify CSS rules to apply when the transition is in a certain state. For example, the following directive will make an animation change color after every third of the animation:
+
+```CSS
+@keyframes foo {
+  0% { background: red; }
+  33% { background: blue; }
+  66% { background: green; }
+}
+
+div {
+  animation-name: foo; /* Apply foo */
+}
+```
+
+Moreover, you can use the `from` and `to` aliases for `0%` and `100%`, respectively. 

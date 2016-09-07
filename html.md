@@ -146,6 +146,7 @@ search engines information about our website. The most important meta tags are:
 
 The `<link>` tag is responsible for linking an HTML document to some other kind
 of resource, often a stylesheet. This tag takes a MIME `type` attribute such as
+
 `text/css`, `rel` attribute to specify a relationship between the current
 document and linked resource. This relationship is often `stylesheet` for CSS
 files, but many other options, such as `help` for help files, exist. Also, for

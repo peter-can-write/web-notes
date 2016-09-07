@@ -383,4 +383,4 @@ We already saw that SASS provides a number of useful built-in functions for a va
 }
 ```
 
-The syntax is essentially like for `@mixin`s, except for the `@return` directive. As such, functions can also take variadic arguments, suffixed by an ellipsis. 
+The syntax is essentially like for `@mixin`s, except for the `@return` directive. As such, functions can also take variadic arguments, suffixed by an ellipsis.

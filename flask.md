@@ -188,7 +188,7 @@ As you can see, `macro`s are directives which you pass a function signature like
 {{ input(foo) }}
 ```
 
-However, note that if we want to place the macro into another file (like `macros.html` --- a goo idea), we have to *import* the macro using the `import` syntax:
+However, note that if we want to place the macro into another file (like `macros.html` --- a good idea), we have to *import* the macro using the `import` syntax:
 
 ```HTML
 {{ from '<file>' import <macro> with context }}
