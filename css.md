@@ -268,6 +268,15 @@ The fourth property is `transition-timing-function`, which specifies how the tra
 
 Lastly, note that the `transition: <property> <duration> [delay [function]]` property allows you to aggregate these properties.
 
+Note that you may only ever have one `transition` rule per selector. For multiple properties, separate your transition values with a comma:
+
+```css
+transition: height 5s, width 10s, color 10s;
+// not
+transition: height 5s;
+transition: width 10s; // overrides the above
+```
+
 ## Animations
 
 Transitions are actually just a subclass of a broader, more general concept, called *animations*. Basically, a transition is a single animation from one state to another. However, animations can have many steps in between, giving you a lot more control. More precisely, in CSS3, the animation syntax involves the following:
@@ -301,4 +310,4 @@ div {
 }
 ```
 
-Moreover, you can use the `from` and `to` aliases for `0%` and `100%`, respectively. 
+Moreover, you can use the `from` and `to` aliases for `0%` and `100%`, respectively.

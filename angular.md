@@ -182,10 +182,9 @@ Some common and useful built-in directives are:
 * `ng-app="<name of app>"`: The attribute directive you use to initialize your
   Angular application.
 * `ng-repeat="<iterator> in <sequence>"`: An attribute directive that tells
-  Angular to dynamically replicate the inner HTML nodes of an element for every
+  Angular to dynamically replicate an element for every
   element of a sequence property, e.g. an array. For example, we could have a
-  `$scope.array = [1, 2, 3]` property and some HTML like this: `<div ng-repeat="i
-  in array"><p> {{ i }} </p></div>`. This would add and resolve (i.e. perform
+  `$scope.array = [1, 2, 3]` property and some HTML like this: `<div ng-repeat="i in array"><p> {{ i }} </p></div>`. This would add and resolve (i.e. perform
   template substitution) for each element in the array. When using `ng-repeat`,
   some special variables become visible in the repeated template scope:
   - `$index`: Holds the current index of iteration as a number ($0$ to $n - 1$).
@@ -322,7 +321,7 @@ of the isolated scope:
   scope. For example, if we have a variable local to the directive called `baz`,
   we can call the function from the parent scope via `foo({arg: baz})`.
 
-Furthermore, setting `scope: true` will simply inherit all variables from the parent scope, while setting `scope: {}` will create an isolated, empty scope ([reference](http://stackoverflow.com/questions/24528388/what-is-the-difference-between-scope-and-scopetrue-inside-directive)). Other properties we can give the returned object are:
+Furthermore, setting `scope: true` will simply (prototypically) inherit all variables from the parent scope, while setting `scope: {}` will create an isolated, empty scope ([reference](http://stackoverflow.com/questions/24528388/what-is-the-difference-between-scope-and-scopetrue-inside-directive)). Other properties we can give the returned object are:
 
 * `priority`: a metric to tell the Angular compiler what directives to inspect
   first. By default, this value is zero. Higher priority directives are compiled
@@ -383,7 +382,7 @@ provider can be one of two things: an object or a constructor function. Either
 way, it must have a `$get` property, which is the service factory. When called,
 this function must return the service instance, whatever that is.
 
-Furthermore, there exist convenience fuctions that take care of easing the
+Furthermore, there exist convenience functions that take care of easing the
 registration of a new service. There are two most important variants: the
 `factory` and `service` methods. The former basically allows setting the
 function that is assigned to `$get` in the service provider, while `service`
@@ -401,7 +400,7 @@ outside of the factory method (`$get`) to actually configure the factory. This
 configuration can be done in the `module.config` function. In practice, you will
 most often want to use either `factory` or `service`. The former if you want to
 return an object, the latter if you want to return a class instance. Once you
-have define a service, you can dependency-inject it:
+have defined a service, you can dependency-inject it:
 
 ```
 app.controller('MyController',
@@ -654,7 +653,7 @@ Resources:
 
 * http://www.w3schools.com/angular/angular_events.asp
 
-### The `$digest` Cycle
+### The `$digest` cycle
 
 Whenever we speak of events, we usually speak of model changes -- updates to our application's state. For example, we may have some model variable in our scope (`$scope.variable`), that we change when the user clicks a button. One question we may have at this point relates to the expressions we may have set up in our view that listen for changes to that variable. That is, if we have some expression `{{ variable }}` and the `variable` changes, how does Angular know to update the inner HTML of that expression?
 
@@ -708,3 +707,4 @@ Resources:
 
 * https://www.sitepoint.com/understanding-angulars-apply-digest/
 * http://www.jstips.co/en/angularjs-digest-vs-apply/
+* https://docs.angularjs.org/api/ng/type/$rootScope.Scope
