@@ -351,28 +351,6 @@ You define mixins using the `@mixin` directive and any arguments prefixed by the
 }
 ```
 
-Moreover, you can use the `@content` directive to pass a block to your mixin. That is, you use the `@content` marker inside your mixin and when you define a block after you `@include` the mixin, it will be copied in that place where the `@content` is, inside the mixin. As such, the following:
-
-```scss
-@mixin foo() {
-  .foo {
-    @content;
-  }
-}
-
-@include foo() {
-	 color: red;
-}
-```
-
-compiles to
-
-```css
-.foo {
-     color: red;
-}
-```
-
 #### Variadic Mixins
 
 Variable (variadic) arguments are allowed too, by appending an ellipsis to the parameters. Only the last one may be variadic and it will swallow up all arguments not bound to positional parameters before the variadic one. You can use them just like other variables, as they are simply expanded (to a list):
@@ -405,4 +383,4 @@ We already saw that SASS provides a number of useful built-in functions for a va
 }
 ```
 
-The syntax is essentially like for `@mixin`s, except for the `@return` directive. As such, functions can also take variadic arguments, suffixed by an ellipsis.
+The syntax is essentially like for `@mixin`s, except for the `@return` directive. As such, functions can also take variadic arguments, suffixed by an ellipsis. 
